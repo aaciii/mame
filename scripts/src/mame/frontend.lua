@@ -213,3 +213,27 @@ dependency {
 custombuildtask {
 	{ MAME_DIR .. "COPYING", GEN_DIR .. "emu/copying.ipp", { MAME_DIR .. "scripts/build/file2lines.py" }, { "@echo Converting COPYING...", PYTHON .. " $(1) $(<) $(@) copying_text" } },
 }
+
+-- Video Snap Preview dev03: optional environment-controlled dependency.
+configuration { }
+if os.getenv("MAME_VIDEO_SNAPS") == "1" then
+    defines { "MAME_VIDEO_SNAPS=1" }
+    local inc = backtick("pkg-config --variable=includedir libavformat")
+    if inc == nil or inc == "" then
+        error("Video previews require FFmpeg development packages and pkg-config")
+    end
+    if _OPTIONS["NO_USE_PORTAUDIO"] == "1" then
+        error("Video Snap Preview audio requires PortAudio; do not set NO_USE_PORTAUDIO=1")
+    end
+    includedirs { inc, ext_includedir("portaudio") }
+    files {
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_player.cpp",
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_audio.cpp",
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_audio.h",
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_player.h",
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_paths.cpp",
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_paths.h",
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_menu.ipp",
+    }
+end
+configuration { }

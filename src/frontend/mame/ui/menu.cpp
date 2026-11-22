@@ -292,7 +292,7 @@ uint32_t menu::global_state::ui_handler()
 			else
 				m_ui.set_pointers(std::begin(pointers), std::begin(pointers));
 
-			return need_update ? mame_ui_manager::HANDLER_UPDATE : 0;
+			return (need_update || m_stack->needs_continuous_update()) ? mame_ui_manager::HANDLER_UPDATE : 0;
 		}
 	}
 }

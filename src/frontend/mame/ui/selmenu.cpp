@@ -10,6 +10,10 @@
 
 #include "emu.h"
 #include "ui/selmenu.h"
+#if defined(MAME_VIDEO_SNAPS)
+#include "ui/videosnap_player.h"
+#include "ui/videosnap_paths.h"
+#endif
 
 #include "ui/datmenu.h"
 #include "ui/info.h"
@@ -52,7 +56,11 @@ namespace {
 
 std::pair<char const *, char const *> RIGHT_PANEL_NAMES[RP_LAST + 1] = {
 		{ "image", N_("Images") },
-		{ "info",  N_("Info") } };
+		{ "info", N_("Info") },
+#if defined(MAME_VIDEO_SNAPS)
+        { "video", N_("Video") },
+#endif
+};
 
 enum
 {
@@ -140,7 +148,7 @@ void load_image(bitmap_argb32 &bitmap, emu_file &file, std::string const &base)
 }
 
 
-void load_driver_image(bitmap_argb32 &bitmap, emu_file &file, game_driver const &driver)
+void load_driver_image(bitmap_argb32 &bitmap, emu_file &file, game_driver const &driver, bool inherit_parent = true)
 {
 	// try to load snapshot first from saved "0000.png" file
 	std::string fullname = driver.name;
@@ -151,7 +159,7 @@ void load_driver_image(bitmap_argb32 &bitmap, emu_file &file, game_driver const 
 		load_image(bitmap, file, fullname);
 
 	// if fail again, attempt to load from parent file
-	if (!bitmap.valid())
+	if (!bitmap.valid() && inherit_parent)
 	{
 		// ignore BIOS sets
 		bool isclone = strcmp(driver.parent, "0") != 0;
@@ -174,6 +182,10 @@ void load_driver_image(bitmap_argb32 &bitmap, emu_file &file, game_driver const 
 }
 
 } // anonymous namespace
+
+#if defined(MAME_VIDEO_SNAPS)
+#include "ui/videosnap_menu.ipp"
+#endif
 
 
 class menu_select_launch::software_parts : public menu
@@ -946,6 +958,9 @@ void menu_select_launch::menu_activated()
 
 void menu_select_launch::menu_deactivated()
 {
+#if defined(MAME_VIDEO_SNAPS)
+    stop_video_preview();
+#endif
 	ui().options().set_value(OPTION_HIDE_PANELS, m_panels_status, OPTION_PRIORITY_CMDLINE);
 }
 
@@ -3457,6 +3472,10 @@ void menu_select_launch::draw(u32 flags)
 
 void menu_select_launch::draw_right_panel(u32 flags)
 {
+#if defined(MAME_VIDEO_SNAPS)
+    if (!show_right_panel() || (m_right_panel != RP_VIDEO) || !is_active() || (flags & PROCESS_NOINPUT))
+        stop_video_preview();
+#endif
 	if (show_right_panel())
 	{
 		m_right_panel_width = 0.3F - m_divider_width;
@@ -3477,9 +3496,13 @@ void menu_select_launch::draw_right_panel(u32 flags)
 		}
 
 		if (m_right_panel == RP_IMAGES)
-			arts_render(flags);
-		else
-			infos_render(flags);
+            arts_render(flags);
+#if defined(MAME_VIDEO_SNAPS)
+        else if (m_right_panel == RP_VIDEO)
+            video_render(flags);
+#endif
+        else
+            infos_render(flags);
 	}
 	else
 	{
@@ -3502,7 +3525,11 @@ void menu_select_launch::draw_right_box_tabs(u32 flags)
 	float const x2(1.0F - lr_border());
 	float const tabwidth = right_tab_width();
 
-	std::string const buffer[RP_LAST + 1] = { _(RIGHT_PANEL_NAMES[0].second), _(RIGHT_PANEL_NAMES[1].second) };
+	std::string buffer[RP_LAST + 1];
+	for (int i = RP_FIRST; i <= RP_LAST; ++i)
+	{
+		buffer[i] = _(RIGHT_PANEL_NAMES[i].second);
+	}
 
 	// check size
 	float text_size = 1.0f;

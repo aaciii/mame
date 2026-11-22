@@ -365,6 +365,7 @@ protected:
 	virtual bool custom_mouse_scroll(int lines);
 
 	// event notifications
+	virtual bool needs_continuous_update() const { return false; }
 	virtual void menu_activated();
 	virtual void menu_deactivated();
 	virtual void menu_dismissed();

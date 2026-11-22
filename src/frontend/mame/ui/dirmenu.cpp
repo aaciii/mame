@@ -10,6 +10,7 @@
 
 #include "emu.h"
 #include "ui/dirmenu.h"
+#include "ui/moptions.h"
 
 #include "ui/ui.h"
 #include "ui/utils.h"
@@ -51,6 +52,9 @@ const folders_entry f_folders[] =
 	{ N_p("path-option", "DATs"),               OPTION_HISTORY_PATH       },
 	{ N_p("path-option", "Category INIs"),      OPTION_CATEGORYINI_PATH   },
 	{ N_p("path-option", "Snapshots"),          OPTION_SNAPSHOT_DIRECTORY },
+#if defined(MAME_VIDEO_SNAPS)
+	{ N_p("path-option", "Videos"),             OPTION_VIDEO_DIRECTORY    },
+#endif
 	{ N_p("path-option", "Icons"),              OPTION_ICONS_PATH         },
 	{ N_p("path-option", "Control Panels"),     OPTION_CPANELS_PATH       },
 	{ N_p("path-option", "Cabinets"),           OPTION_CABINETS_PATH      },

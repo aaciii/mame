@@ -37,6 +37,16 @@
 #define OPTION_COVER_PATH             "covers_directory"
 #define OPTION_UI_PATH                "ui_path"
 
+// Video Snap Preview options
+#if defined(MAME_VIDEO_SNAPS)
+#define OPTION_VIDEO_DIRECTORY          "video_directory"
+#define OPTION_VIDEO_ENABLE_AUDIO         "video_enable_audio"
+#define OPTION_VIDEO_VOLUME        "video_volume"
+#define OPTION_VIDEO_INHERIT_PARENT            "video_inherit_parent"
+#define OPTION_VIDEO_IMAGE_FALLBACK             "video_image_fallback"
+#define OPTION_VIDEO_IMAGE_FALLBACK_DIRECTORY   "video_image_fallback_directory"
+#endif
+
 // core misc options
 #define OPTION_SYSTEM_NAMES           "system_names"
 #define OPTION_SKIP_WARNINGS          "skip_warnings"
@@ -109,6 +119,15 @@ public:
 	const char *icons_directory() const { return value(OPTION_ICONS_PATH); }
 	const char *covers_directory() const { return value(OPTION_COVER_PATH); }
 	const char *ui_path() const { return value(OPTION_UI_PATH); }
+
+#if defined(MAME_VIDEO_SNAPS)
+	const char *video_directory() const { return value(OPTION_VIDEO_DIRECTORY); }
+	bool video_enable_audio() const { return bool_value(OPTION_VIDEO_ENABLE_AUDIO); }
+	int video_volume() const { return int_value(OPTION_VIDEO_VOLUME); }
+	bool video_inherit_parent() const { return bool_value(OPTION_VIDEO_INHERIT_PARENT); }
+	bool video_image_fallback() const { return bool_value(OPTION_VIDEO_IMAGE_FALLBACK); }
+	const char *video_image_fallback_directory() const { return value(OPTION_VIDEO_IMAGE_FALLBACK_DIRECTORY); }
+#endif
 
 	// Misc options
 	const char *system_names() const { return value(OPTION_SYSTEM_NAMES); }

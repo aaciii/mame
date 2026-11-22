@@ -42,6 +42,17 @@ const options_entry ui_options::s_option_entries[] =
 	{ OPTION_COVER_PATH,                    "covers",           option_type::MULTIPATH,  "path to software cover image" },
 	{ OPTION_UI_PATH,                       "ui",               option_type::MULTIPATH,  "path to UI files" },
 
+#if defined(MAME_VIDEO_SNAPS)
+	// Video Snap Preview options
+	{ nullptr, nullptr, option_type::HEADER, "VIDEO SNAP PREVIEW OPTIONS" },
+	{ OPTION_VIDEO_DIRECTORY, "videosnaps", option_type::MULTIPATH, "video preview search paths; relative paths use the executable directory" },
+	{ OPTION_VIDEO_ENABLE_AUDIO, "1", option_type::BOOLEAN, "enable embedded video preview audio" },
+	{ OPTION_VIDEO_VOLUME "(0-100)", "100", option_type::INTEGER, "video preview volume, 0 to 100" },
+	{ OPTION_VIDEO_INHERIT_PARENT, "0", option_type::BOOLEAN, "allow parent videos and parent fallback images in the Video tab" },
+	{ OPTION_VIDEO_IMAGE_FALLBACK, "1", option_type::BOOLEAN, "show a still image when preview video is unavailable" },
+	{ OPTION_VIDEO_IMAGE_FALLBACK_DIRECTORY, "", option_type::MULTIPATH, "fallback image paths; empty uses configured snapshot paths" },
+#endif
+
 	// misc options
 	{ nullptr,                              nullptr,            option_type::HEADER,     "UI MISC OPTIONS" },
 	{ OPTION_SYSTEM_NAMES,                  "",                 option_type::MULTIPATH,  "translated system names file" },

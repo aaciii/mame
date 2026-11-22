@@ -40,7 +40,12 @@ enum
 	RP_FIRST = 0,
 	RP_IMAGES = RP_FIRST,
 	RP_INFOS,
+#if defined(MAME_VIDEO_SNAPS)
+	RP_VIDEO,
+	RP_LAST = RP_VIDEO
+#else
 	RP_LAST = RP_INFOS
+#endif
 };
 
 class machine_static_info;
@@ -378,6 +383,14 @@ private:
 	void draw_right_panel(u32 flags);
 	void draw_right_box_tabs(u32 flags);
 	void draw_right_box_heading(u32 flags, bool larrow, bool rarrow, std::string_view text);
+
+#if defined(MAME_VIDEO_SNAPS)
+    class video_preview;
+    std::unique_ptr<video_preview> m_video;
+    void video_render(u32 flags);
+    void stop_video_preview();
+    virtual bool needs_continuous_update() const override;
+#endif
 
 	// images render
 	void arts_render(u32 flags);
