@@ -233,6 +233,8 @@ if os.getenv("MAME_VIDEO_SNAPS") == "1" then
         MAME_DIR .. "src/frontend/mame/ui/videosnap_player.h",
         MAME_DIR .. "src/frontend/mame/ui/videosnap_paths.cpp",
         MAME_DIR .. "src/frontend/mame/ui/videosnap_paths.h",
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_ffmpeg.cpp",
+        MAME_DIR .. "src/frontend/mame/ui/videosnap_ffmpeg.h",
         MAME_DIR .. "src/frontend/mame/ui/videosnap_menu.ipp",
     }
 end

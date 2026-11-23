@@ -40,6 +40,8 @@
 // Video Snap Preview options
 #if defined(MAME_VIDEO_SNAPS)
 #define OPTION_VIDEO_DIRECTORY          "video_directory"
+#define OPTION_VIDEO_PREVIEW_ENABLE      "video_preview_enable"
+#define OPTION_FFMPEG_PATH               "ffmpeg_path"
 #define OPTION_VIDEO_ENABLE_AUDIO         "video_enable_audio"
 #define OPTION_VIDEO_VOLUME        "video_volume"
 #define OPTION_VIDEO_INHERIT_PARENT            "video_inherit_parent"
@@ -122,6 +124,8 @@ public:
 
 #if defined(MAME_VIDEO_SNAPS)
 	const char *video_directory() const { return value(OPTION_VIDEO_DIRECTORY); }
+	bool video_preview_enable() const { return bool_value(OPTION_VIDEO_PREVIEW_ENABLE); }
+	const char *ffmpeg_path() const { return value(OPTION_FFMPEG_PATH); }
 	bool video_enable_audio() const { return bool_value(OPTION_VIDEO_ENABLE_AUDIO); }
 	int video_volume() const { return int_value(OPTION_VIDEO_VOLUME); }
 	bool video_inherit_parent() const { return bool_value(OPTION_VIDEO_INHERIT_PARENT); }

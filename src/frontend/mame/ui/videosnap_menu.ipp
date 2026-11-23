@@ -95,12 +95,26 @@ void menu_select_launch::video_render(u32 flags)
         }
         if (!filename.empty())
         {
+            m_video->player.configure_ffmpeg(ui().options().ffmpeg_path());
             m_video->player.configure_audio(ui().options().video_enable_audio(),
                 ui().options().video_volume());
             m_video->player.start(filename);
         }
     }
     auto &preview = *m_video;
+    auto const draw_failure = [this, &preview] ()
+    {
+        if (preview.displaying_video || (preview.player.status() != videosnap::state::failed))
+            return;
+        std::string const message = std::string(_("Video preview unavailable: ")) + preview.player.error();
+        ui().draw_text_full(
+                target(), message,
+                m_right_content_hbounds.first, m_right_content_vbounds.second - (3.0F * m_info_line_height),
+                m_right_content_hbounds.second - m_right_content_hbounds.first,
+                text_layout::text_justify::CENTER, text_layout::word_wrapping::WORD,
+                mame_ui_manager::NORMAL, ui().colors().text_color(), ui().colors().text_bg_color(),
+                nullptr, nullptr, m_info_line_height);
+    };
     videosnap::frame next;
     if (preview.player.take_frame(next))
     {
@@ -123,7 +137,7 @@ void menu_select_launch::video_render(u32 flags)
     if (!preview.displaying_video)
     {
         if (!preview.still_bitmap.valid())
-            return;
+            { draw_failure(); return; }
         if (!preview.bound)
         {
             preview.texture->set_bitmap(preview.still_bitmap,
@@ -147,4 +161,5 @@ void menu_select_launch::video_render(u32 flags)
     float const top = m_right_content_vbounds.first + (available_height - height) * 0.5F;
     container().add_quad(left, top, left + width, top + height, rgb_t::white(),
         preview.texture.get(), PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+    draw_failure();
 }

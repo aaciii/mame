@@ -210,27 +210,6 @@ end
 	}
 
 
--- Video Snap Preview dev03: FFmpeg libraries for the main executable.
-if os.getenv("MAME_VIDEO_SNAPS") == "1" then
-    local ff_libdir = backtick("pkg-config --variable=libdir libavformat")
-    if ff_libdir == nil or ff_libdir == "" then
-        error("Cannot locate FFmpeg library directory")
-    end
-    libdirs { ff_libdir }
-    if _OPTIONS["targetos"] == "windows" then
-        -- Explicit import archives bypass the global -static preference.
-        for _, library in ipairs({"avformat", "avcodec", "swscale", "swresample", "avutil"}) do
-            local archive = ff_libdir .. "/lib" .. library .. ".dll.a"
-            if not os.isfile(archive) then
-                error("Missing FFmpeg MinGW import archive: " .. archive)
-            end
-            links { archive }
-        end
-    else
-        links { "avformat", "avcodec", "swscale", "swresample", "avutil" }
-    end
-end
-
 	override_resources = false;
 
 	maintargetosdoptions(_target, _subtarget)

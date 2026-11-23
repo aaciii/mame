@@ -291,7 +291,7 @@ private:
 	float left_panel_right() const noexcept { return lr_border() + m_left_panel_width; }
 	float right_panel_left() const noexcept { return 1.0F - lr_border() - m_right_panel_width; }
 	float right_panel_right() const noexcept { return 1.0F - lr_border(); }
-	float right_tab_width() const noexcept { return m_right_panel_width / float(RP_LAST - RP_FIRST + 1); }
+	float right_tab_width() const noexcept { return m_right_panel_width / float(m_right_panel_last - RP_FIRST + 1); }
 	float right_arrows_top() const noexcept { return m_right_heading_top + (0.1F * line_height()); }
 	float right_arrows_bottom() const noexcept { return m_right_heading_top + (0.9F * line_height()); }
 	float left_divider_left() const noexcept { return lr_border() + m_left_panel_width; }
@@ -481,6 +481,7 @@ private:
 
 	u8                          m_panels_status;
 	u8                          m_right_panel;
+	u8                          m_right_panel_last;
 	bool                        m_has_icons;
 	bool                        m_switch_image;
 	u8                          m_image_view;

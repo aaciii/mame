@@ -570,6 +570,11 @@ menu_select_launch::menu_select_launch(mame_ui_manager &mui, render_target &targ
 	, m_toolbar_main_left(-1.0)
 	, m_panels_status(SHOW_PANELS)
 	, m_right_panel(RP_FIRST)
+#if defined(MAME_VIDEO_SNAPS)
+	, m_right_panel_last(mui.options().video_preview_enable() ? RP_LAST : RP_INFOS)
+#else
+	, m_right_panel_last(RP_LAST)
+#endif
 	, m_has_icons(false)
 	, m_switch_image(false)
 	, m_image_view(FIRST_VIEW)
@@ -3526,7 +3531,7 @@ void menu_select_launch::draw_right_box_tabs(u32 flags)
 	float const tabwidth = right_tab_width();
 
 	std::string buffer[RP_LAST + 1];
-	for (int i = RP_FIRST; i <= RP_LAST; ++i)
+	for (int i = RP_FIRST; i <= m_right_panel_last; ++i)
 	{
 		buffer[i] = _(RIGHT_PANEL_NAMES[i].second);
 	}
@@ -3540,7 +3545,7 @@ void menu_select_launch::draw_right_box_tabs(u32 flags)
 		text_size = std::min(text_size, tmp_size);
 	}
 
-	for (int cells = RP_FIRST; cells <= RP_LAST; ++cells)
+	for (int cells = RP_FIRST; cells <= m_right_panel_last; ++cells)
 	{
 		float const tableft(x1 + (float(cells - RP_FIRST) * tabwidth));
 
@@ -3603,7 +3608,7 @@ void menu_select_launch::draw_right_box_tabs(u32 flags)
 			}
 		}
 	}
-	if (RP_LAST != m_right_panel)
+	if (m_right_panel_last != m_right_panel)
 	{
 		container().add_line(
 				x1 + (float(m_right_panel + 1) * tabwidth), m_right_tabs_bottom, x2, m_right_tabs_bottom,
@@ -3864,7 +3869,7 @@ char const *menu_select_launch::right_image_config_string() const
 void menu_select_launch::set_right_panel(u8 index)
 {
 	assert(std::size(RIGHT_PANEL_NAMES) > index);
-	m_right_panel = index;
+	m_right_panel = (index <= m_right_panel_last) ? index : u8(RP_IMAGES);
 }
 
 void menu_select_launch::set_right_image(u8 index)
@@ -3883,7 +3888,7 @@ void menu_select_launch::set_right_panel(std::string_view value)
 			std::begin(RIGHT_PANEL_NAMES),
 			std::end(RIGHT_PANEL_NAMES),
 			[&value] (auto const &that) { return value == that.first; });
-	if (std::end(RIGHT_PANEL_NAMES) != found)
+	if ((std::end(RIGHT_PANEL_NAMES) != found) && ((found - std::begin(RIGHT_PANEL_NAMES)) <= m_right_panel_last))
 		m_right_panel = found - std::begin(RIGHT_PANEL_NAMES);
 }
 

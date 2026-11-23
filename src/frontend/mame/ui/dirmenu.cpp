@@ -54,6 +54,7 @@ const folders_entry f_folders[] =
 	{ N_p("path-option", "Snapshots"),          OPTION_SNAPSHOT_DIRECTORY },
 #if defined(MAME_VIDEO_SNAPS)
 	{ N_p("path-option", "Videos"),             OPTION_VIDEO_DIRECTORY    },
+	{ N_p("path-option", "FFmpeg"),            OPTION_FFMPEG_PATH        },
 #endif
 	{ N_p("path-option", "Icons"),              OPTION_ICONS_PATH         },
 	{ N_p("path-option", "Control Panels"),     OPTION_CPANELS_PATH       },

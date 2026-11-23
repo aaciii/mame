@@ -45,6 +45,8 @@ const options_entry ui_options::s_option_entries[] =
 #if defined(MAME_VIDEO_SNAPS)
 	// Video Snap Preview options
 	{ nullptr, nullptr, option_type::HEADER, "VIDEO SNAP PREVIEW OPTIONS" },
+	{ OPTION_VIDEO_PREVIEW_ENABLE, "0", option_type::BOOLEAN, "show the Video tab in the system selection menu" },
+	{ OPTION_FFMPEG_PATH, "ffmpeg", option_type::PATH, "folder containing the FFmpeg shared libraries; relative paths use the executable directory" },
 	{ OPTION_VIDEO_DIRECTORY, "videosnaps", option_type::MULTIPATH, "video preview search paths; relative paths use the executable directory" },
 	{ OPTION_VIDEO_ENABLE_AUDIO, "1", option_type::BOOLEAN, "enable embedded video preview audio" },
 	{ OPTION_VIDEO_VOLUME "(0-100)", "100", option_type::INTEGER, "video preview volume, 0 to 100" },
