@@ -46,10 +46,10 @@ const options_entry ui_options::s_option_entries[] =
 	// Video Snap Preview options
 	{ nullptr, nullptr, option_type::HEADER, "VIDEO SNAP PREVIEW OPTIONS" },
 	{ OPTION_VIDEO_PREVIEW_ENABLE, "0", option_type::BOOLEAN, "show the Video tab in the system selection menu" },
-	{ OPTION_FFMPEG_PATH, "ffmpeg", option_type::PATH, "folder containing the FFmpeg shared libraries; relative paths use the executable directory" },
-	{ OPTION_VIDEO_DIRECTORY, "videosnaps", option_type::MULTIPATH, "video preview search paths; relative paths use the executable directory" },
+	{ OPTION_FFMPEG_PATH, "ffmpeg/bin", option_type::PATH, "folder containing the FFmpeg shared libraries; relative paths use the executable directory" },
+	{ OPTION_VIDEO_DIRECTORY, "videos", option_type::MULTIPATH, "video preview search paths; relative paths use the executable directory" },
 	{ OPTION_VIDEO_ENABLE_AUDIO, "1", option_type::BOOLEAN, "enable embedded video preview audio" },
-	{ OPTION_VIDEO_VOLUME "(0-100)", "100", option_type::INTEGER, "video preview volume, 0 to 100" },
+	{ OPTION_VIDEO_VOLUME "(0-100)", "10", option_type::INTEGER, "video preview volume, 0 to 100" },
 	{ OPTION_VIDEO_INHERIT_PARENT, "0", option_type::BOOLEAN, "allow parent videos and parent fallback images in the Video tab" },
 	{ OPTION_VIDEO_IMAGE_FALLBACK, "1", option_type::BOOLEAN, "show a still image when preview video is unavailable" },
 	{ OPTION_VIDEO_IMAGE_FALLBACK_DIRECTORY, "", option_type::MULTIPATH, "fallback image paths; empty uses configured snapshot paths" },
