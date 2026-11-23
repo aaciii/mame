@@ -5,9 +5,10 @@
 #include <memory>
 #include <string>
 namespace videosnap {
+struct ffmpeg_api;
 class audio_output {
 public:
-    audio_output(std::string filename, double media_origin, int volume,
+    audio_output(ffmpeg_api const &ff, std::string filename, double media_origin, int volume,
         std::atomic<bool> &owner_cancel, std::atomic<double> &epoch);
     ~audio_output();
     audio_output(audio_output const &) = delete;

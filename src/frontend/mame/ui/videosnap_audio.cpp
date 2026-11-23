@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "emu.h"
 #include "videosnap_audio.h"
+#include "videosnap_ffmpeg.h"
 #include <portaudio.h>
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/channel_layout.h>
-#include <libavutil/error.h>
-#include <libswresample/swresample.h>
-}
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cerrno>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -24,10 +22,10 @@ namespace {
 double steady_seconds() {
     return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
 }
-void ffcheck(int result, char const *where) {
+void ffcheck(ffmpeg_api const &ff, int result, char const *where) {
     if (result >= 0) return;
     char text[AV_ERROR_MAX_STRING_SIZE]{};
-    av_strerror(result, text, sizeof(text));
+    ff.av_strerror(result, text, sizeof(text));
     throw std::runtime_error(std::string(where) + ": " + text);
 }
 void pacheck(PaError result, char const *where) {
@@ -35,6 +33,8 @@ void pacheck(PaError result, char const *where) {
         throw std::runtime_error(std::string(where) + ": " + Pa_GetErrorText(result));
 }
 struct audio_resources {
+    explicit audio_resources(ffmpeg_api const &api) : ff(api) { }
+    ffmpeg_api const &ff;
     AVFormatContext *format = nullptr;
     AVCodecContext *codec = nullptr;
     AVPacket *packet = nullptr;
@@ -45,15 +45,16 @@ struct audio_resources {
     ~audio_resources() {
         if (stream) { Pa_AbortStream(stream); Pa_CloseStream(stream); }
         if (pa_initialized) Pa_Terminate();
-        swr_free(&swr);
-        av_frame_free(&frame);
-        av_packet_free(&packet);
-        avcodec_free_context(&codec);
-        avformat_close_input(&format);
+        ff.swr_free(&swr);
+        ff.av_frame_free(&frame);
+        ff.av_packet_free(&packet);
+        ff.avcodec_free_context(&codec);
+        ff.avformat_close_input(&format);
     }
 };
 }
 struct audio_output::implementation {
+    ffmpeg_api const &ff;
     struct sample { std::int64_t index; float left, right; };
     static constexpr std::uint64_t capacity = 192000;
     std::vector<sample> ring;
@@ -72,9 +73,9 @@ struct audio_output::implementation {
     bool mapped = false;
     double pa_to_steady = 0;
 
-    implementation(std::string filename, double media_origin, int volume,
+    implementation(ffmpeg_api const &api, std::string filename, double media_origin, int volume,
         std::atomic<bool> &cancel, std::atomic<double> &start)
-        : ring(capacity), owner_cancel(cancel), epoch(start),
+        : ff(api), ring(capacity), owner_cancel(cancel), epoch(start),
           gain(float(std::clamp(volume, 0, 100)) / 100.0F), origin(media_origin) {
         worker = std::thread([this, filename = std::move(filename)] { run(filename); });
     }
@@ -134,34 +135,34 @@ struct audio_output::implementation {
     }
     void run(std::string const &filename) noexcept {
         try {
-            audio_resources r;
-            r.format = avformat_alloc_context();
+            audio_resources r(ff);
+            r.format = ff.avformat_alloc_context();
             if (!r.format) throw std::bad_alloc();
             r.format->interrupt_callback.callback = [](void *p) -> int {
                 return static_cast<implementation *>(p)->cancelled() ? 1 : 0;
             };
             r.format->interrupt_callback.opaque = this;
             AVDictionary *options = nullptr;
-            av_dict_set(&options, "protocol_whitelist", "file", 0);
-            int const opened = avformat_open_input(&r.format, filename.c_str(), nullptr, &options);
-            av_dict_free(&options);
-            ffcheck(opened, "Open preview audio");
-            ffcheck(avformat_find_stream_info(r.format, nullptr), "Read audio streams");
-            int const index = av_find_best_stream(r.format, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
+            ff.av_dict_set(&options, "protocol_whitelist", "file", 0);
+            int const opened = ff.avformat_open_input(&r.format, filename.c_str(), nullptr, &options);
+            ff.av_dict_free(&options);
+            ffcheck(ff, opened, "Open preview audio");
+            ffcheck(ff, ff.avformat_find_stream_info(r.format, nullptr), "Read audio streams");
+            int const index = ff.av_find_best_stream(r.format, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
             if (index == AVERROR_STREAM_NOT_FOUND) {
                 ready.store(true, std::memory_order_release);
                 return; // A video-only file is not an error.
             }
-            ffcheck(index, "Find preview audio");
+            ffcheck(ff, index, "Find preview audio");
             AVStream *stream = r.format->streams[index];
-            auto const *decoder = avcodec_find_decoder(stream->codecpar->codec_id);
+            auto const *decoder = ff.avcodec_find_decoder(stream->codecpar->codec_id);
             if (!decoder) throw std::runtime_error("No decoder for preview audio");
-            r.codec = avcodec_alloc_context3(decoder);
+            r.codec = ff.avcodec_alloc_context3(decoder);
             if (!r.codec) throw std::bad_alloc();
-            ffcheck(avcodec_parameters_to_context(r.codec, stream->codecpar), "Copy audio codec");
+            ffcheck(ff, ff.avcodec_parameters_to_context(r.codec, stream->codecpar), "Copy audio codec");
             r.codec->pkt_timebase = stream->time_base;
             r.codec->thread_count = 1;
-            ffcheck(avcodec_open2(r.codec, decoder, nullptr), "Open audio decoder");
+            ffcheck(ff, ff.avcodec_open2(r.codec, decoder, nullptr), "Open audio decoder");
             if (r.codec->sample_rate <= 0 || r.codec->ch_layout.nb_channels <= 0)
                 throw std::runtime_error("Invalid preview audio format");
             pacheck(Pa_Initialize(), "Initialize preview audio output");
@@ -181,25 +182,25 @@ struct audio_output::implementation {
                 sample_rate = int(info->defaultSampleRate);
             pacheck(Pa_IsFormatSupported(nullptr, &output, sample_rate), "Preview output format");
             AVChannelLayout stereo = AV_CHANNEL_LAYOUT_STEREO;
-            ffcheck(swr_alloc_set_opts2(&r.swr, &stereo, AV_SAMPLE_FMT_FLT, sample_rate,
+            ffcheck(ff, ff.swr_alloc_set_opts2(&r.swr, &stereo, AV_SAMPLE_FMT_FLT, sample_rate,
                 &r.codec->ch_layout, r.codec->sample_fmt, r.codec->sample_rate, 0, nullptr), "Allocate audio resampler");
-            ffcheck(swr_init(r.swr), "Initialize audio resampler");
+            ffcheck(ff, ff.swr_init(r.swr), "Initialize audio resampler");
             pacheck(Pa_OpenStream(&r.stream, nullptr, &output, sample_rate,
                 paFramesPerBufferUnspecified, paNoFlag, callback, this), "Open preview audio output");
             if (auto const *stream_info = Pa_GetStreamInfo(r.stream))
                 latency = stream_info->outputLatency;
             pacheck(Pa_StartStream(r.stream), "Start preview audio output");
             has_output = true;
-            r.packet = av_packet_alloc();
-            r.frame = av_frame_alloc();
+            r.packet = ff.av_packet_alloc();
+            r.frame = ff.av_frame_alloc();
             if (!r.packet || !r.frame) throw std::bad_alloc();
             bool have_position = false;
             std::int64_t position = 0;
             std::vector<float> converted;
             auto convert = [&](AVFrame *frame) {
                 int const input_count = frame ? frame->nb_samples : 0;
-                auto const delay = swr_get_delay(r.swr, r.codec->sample_rate);
-                int const output_count = int(av_rescale_rnd(delay + input_count,
+                auto const delay = ff.swr_get_delay(r.swr, r.codec->sample_rate);
+                int const output_count = int(ff.av_rescale_rnd(delay + input_count,
                     sample_rate, r.codec->sample_rate, AV_ROUND_UP));
                 if (output_count <= 0) return 0;
                 converted.resize(std::size_t(output_count) * 2);
@@ -208,21 +209,21 @@ struct audio_output::implementation {
                 int count = 0;
                 if (frame) {
                     std::vector<std::uint8_t const *> input(std::size_t(r.codec->ch_layout.nb_channels));
-                    if (av_sample_fmt_is_planar(r.codec->sample_fmt)) {
+                    if (ff.av_sample_fmt_is_planar(r.codec->sample_fmt)) {
                         for (std::size_t i = 0; i < input.size(); ++i) input[i] = frame->extended_data[i];
                     } else input[0] = frame->extended_data[0];
-                    count = swr_convert(r.swr, planes, output_count, input.data(), input_count);
-                } else count = swr_convert(r.swr, planes, output_count, nullptr, 0);
-                ffcheck(count, "Resample preview audio");
+                    count = ff.swr_convert(r.swr, planes, output_count, input.data(), input_count);
+                } else count = ff.swr_convert(r.swr, planes, output_count, nullptr, 0);
+                ffcheck(ff, count, "Resample preview audio");
                 push(converted.data(), count, position);
                 return count;
             };
             auto receive = [&]() {
                 for (;;) {
                     if (cancelled()) return;
-                    int const got = avcodec_receive_frame(r.codec, r.frame);
+                    int const got = ff.avcodec_receive_frame(r.codec, r.frame);
                     if (got == AVERROR(EAGAIN) || got == AVERROR_EOF) return;
-                    ffcheck(got, "Decode preview audio");
+                    ffcheck(ff, got, "Decode preview audio");
                     if (!have_position) {
                         if (r.frame->best_effort_timestamp != AV_NOPTS_VALUE) {
                             double const pts = r.frame->best_effort_timestamp * av_q2d(stream->time_base);
@@ -231,21 +232,21 @@ struct audio_output::implementation {
                         have_position = true;
                     }
                     convert(r.frame);
-                    av_frame_unref(r.frame);
+                    ff.av_frame_unref(r.frame);
                 }
             };
             for (;;) {
                 if (cancelled()) return;
-                int const got = av_read_frame(r.format, r.packet);
+                int const got = ff.av_read_frame(r.format, r.packet);
                 if (got == AVERROR_EOF) break;
-                ffcheck(got, "Read preview audio packet");
+                ffcheck(ff, got, "Read preview audio packet");
                 if (r.packet->stream_index == index) {
-                    ffcheck(avcodec_send_packet(r.codec, r.packet), "Send audio packet");
+                    ffcheck(ff, ff.avcodec_send_packet(r.codec, r.packet), "Send audio packet");
                     receive();
                 }
-                av_packet_unref(r.packet);
+                ff.av_packet_unref(r.packet);
             }
-            ffcheck(avcodec_send_packet(r.codec, nullptr), "Drain audio decoder");
+            ffcheck(ff, ff.avcodec_send_packet(r.codec, nullptr), "Drain audio decoder");
             receive();
             while (!cancelled() && convert(nullptr) > 0) { }
             ready.store(true, std::memory_order_release);
@@ -260,9 +261,9 @@ struct audio_output::implementation {
         }
     }
 };
-audio_output::audio_output(std::string filename, double origin, int volume,
+audio_output::audio_output(ffmpeg_api const &ff, std::string filename, double origin, int volume,
     std::atomic<bool> &cancel, std::atomic<double> &epoch)
-    : m_impl(std::make_unique<implementation>(std::move(filename), origin, volume, cancel, epoch)) { }
+    : m_impl(std::make_unique<implementation>(ff, std::move(filename), origin, volume, cancel, epoch)) { }
 audio_output::~audio_output() = default;
 bool audio_output::wait_ready(std::chrono::milliseconds timeout) {
     auto const end = std::chrono::steady_clock::now() + timeout;

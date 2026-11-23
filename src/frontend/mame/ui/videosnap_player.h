@@ -31,6 +31,7 @@ public:
     bool take_frame(frame &result);
     // Owner/UI thread only; stops any active playback before changing options.
     void configure_audio(bool enabled, int volume);
+    void configure_ffmpeg(std::string folder);
     std::string audio_error() const;
     state status() const;
     std::string error() const;
@@ -46,6 +47,7 @@ private:
     state m_state = state::stopped;
     std::string m_error;
     std::string m_audio_error;
+    std::string m_ffmpeg_folder = "ffmpeg";
     bool m_audio_enabled = true;
     int m_audio_volume = 100;
 };
